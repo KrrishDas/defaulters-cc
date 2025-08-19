@@ -8,6 +8,7 @@ COMBINED_CSV = DATA_DIR / "processed" / "combined_data_quarterly.csv"
 
 MODELS_DIR = Path("models")
 REPORTS_DIR = Path("reports")
+FIGURES_DIR = REPORTS_DIR / "figures"
 
 # Target & label
 TARGET_COL = "DRCCLACBS"       # delinquency rate series
