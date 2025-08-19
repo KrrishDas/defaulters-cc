@@ -19,7 +19,7 @@ TARGET_FREQ = "Q"
 AGG = "mean"
 
 # Train/test split
-TEST_SIZE = 0.20
+TEST_SIZE = 0.25
 RANDOM_STATE = 42
 
 # Logistic Regression
