@@ -137,4 +137,5 @@ You can render it with RStudio.
 ## Contact
 
 Maintainer: Krrish Das
+
 Open issues or submit pull requests if you have suggestions.
