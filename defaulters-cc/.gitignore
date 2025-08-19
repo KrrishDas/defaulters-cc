@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.env
+.ipynb_checkpoints/
+
+# R
+.Rhistory
+.Rproj.user/
+.RData
+.Ruserdata
+
+# Data artifacts
+data/processed/*
+models/*
+reports/figures/*
+
+# Allow these specific files to be tracked
+!data/processed/.gitkeep
+!models/.gitkeep
+!reports/figures/.gitkeep
+
+# OS / Editor
+.DS_Store
+.vscode/*
+!.vscode/settings.json

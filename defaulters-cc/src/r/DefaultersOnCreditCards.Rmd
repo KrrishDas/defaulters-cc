@@ -1,0 +1,800 @@
+---
+title: "DefaultersOnCreditCards"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(corrplot)
+library(lubridate) 
+library(ggplot2)
+```
+
+LOADING DELINQUENCY RATE: 
+
+```{r}
+# Load Delinquency Rate
+delinquency <- read_csv("./data/DRCCLACBS.csv") %>%
+  rename(DATE = 1, DRCCLACBS = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+```
+
+
+<b><u>1. COMPARING WITH GDP</u></b>
+
+
+```{r}
+# Load GDP
+gdp <- read_csv("./data/GDP.csv") %>%
+  rename(DATE = 1, GDP = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge on DATE
+df <- left_join(delinquency, gdp, by = "DATE")
+
+ggplot(df, aes(x = GDP, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "GDP vs Delinquency Rate", x = "GDP", y = "Delinquency Rate")
+
+cor(df$GDP, df$DRCCLACBS, use = "complete.obs")
+
+```
+
+	•	X-axis: GDP (in billions of chained dollars)
+	•	Y-axis: Credit Card Loan Delinquency Rate (%)
+	•	Red Line: Linear regression line
+	•	Blue Dots: Observed data points
+	•	Correlation: -0.68 → moderate to strong negative correlation
+	
+	
+There is a clear inverse relationship between GDP and credit card delinquency rates. As economic output rises, delinquency generally falls, supporting the idea that stronger economies reduce financial stress on consumers. The negative correlation of -0.68 confirms a moderate-to-strong relationship, although recessionary periods introduce some nonlinearity.
+
+
+
+<b><u>2. COMPARING WITH UNEMPLOYMENT RATE:</b></u>
+
+
+
+```{r}
+# Load UNRATE
+unrate <- read_csv("./data/UNRATE.csv") %>%
+  rename(DATE = 1, UNRATE = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge on DATE
+df <- left_join(delinquency, unrate, by = "DATE")
+
+ggplot(df, aes(x = UNRATE, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Unemployment Rate vs Delinquency Rate", x = "Unemployment Rate", y = "Delinquency Rate")
+
+cor(df$UNRATE, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Unemployment Rate (percent)
+	•	Y-axis: Credit Card Loan Delinquency Rate (percent)
+	•	Red Line: Linear regression line (slightly upward)
+	•	Blue Dots: Observed data points
+	•	Correlation: +0.22 → weak positive correlation
+	
+	
+The relationship between unemployment and delinquency rate is weakly positive (correlation ≈ 0.22). While higher unemployment is generally associated with higher delinquency, the connection is not strong or consistent — indicating other factors (e.g., stimulus, credit forbearance) also influence whether people default during high-unemployment periods.
+
+
+<b><u>3. COMPARING WITH FEDERAL FUNDS EFFECTIVE RATE:</b></u>
+
+
+```{r}
+# Load dff
+dff <- read_csv("./data/DFF.csv") %>%
+  rename(DATE = 1, DFF = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge on DATE
+df <- left_join(delinquency, dff, by = "DATE")
+
+ggplot(df, aes(x = DFF, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Federal Funds Effective Rate vs Delinquency Rate", x = "Federal Funds Effective Rate", y = "Delinquency Rate")
+
+cor(df$DFF, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Federal Funds Effective Rate (DFF)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Positive trend
+	•	Correlation: +0.42 → moderate positive relationship
+	
+There is a moderate positive correlation (r ≈ 0.42) between the federal funds effective rate and credit card delinquency. As interest rates rise, delinquency tends to rise too, likely due to increased debt servicing costs. However, during periods of low interest rates, delinquency still varies — suggesting that monetary policy is one factor among many influencing consumer defaults.
+
+<b><u>4. COMPARING WITH LABOR FORCE PARTICIPATION RATE:</b></u>
+
+```{r}
+# Load civpart
+civpart <- read_csv("./data/CIVPART.csv") %>%
+  rename(DATE = 1, CIVPART = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge on DATE
+df <- left_join(delinquency, civpart, by = "DATE")
+
+ggplot(df, aes(x = CIVPART, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Civilian Labor Force Participation Rate vs Delinquency Rate", x = "Civilian Labor Force Participation Rate", y = "Delinquency Rate")
+
+cor(df$CIVPART, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Civilian Labor Force Participation Rate (CIVPART) — the percentage of the population aged 16+ either working or actively looking for work
+	•	Y-axis: Delinquency Rate on Credit Card Loans
+	•	Red Line: Strong upward linear trend
+	•	Correlation: +0.82 — very strong positive correlation
+	
+Although the correlation between labor force participation and delinquency rate is very strong (r ≈ 0.82), the relationship is not necessarily causal. High participation may occur in economically turbulent times, when people are seeking employment under financial stress, contributing to rising delinquencies. This emphasizes the need to pair participation rate with other indicators like unemployment or income growth to draw meaningful conclusions.
+
+<b><u>5. COMPARING WITH CPI FOR URBAN CONSUMERS:</b></u>
+
+```{r}
+# Load cpiaucsl
+cpiaucsl <- read_csv("./data/CPIAUCSL.csv") %>%
+  rename(DATE = 1, CPIAUCSL = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge on DATE
+df <- left_join(delinquency, cpiaucsl, by = "DATE")
+
+ggplot(df, aes(x = CPIAUCSL, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Consumer Price Index for All Urban Consumers vs Delinquency Rate", x = "Consumer Price Index for All Urban Consumers", y = "Delinquency Rate")
+
+cor(df$CPIAUCSL, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Consumer Price Index for All Urban Consumers (CPIAUCSL)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Negative trend
+	•	Correlation: -0.667 → moderately strong negative relationship
+	
+There is a moderately strong negative correlation (r ≈ -0.667) between the Consumer Price Index and credit card delinquency. As CPI increases — often during times of economic expansion or rising prices — delinquency rates tend to fall. This could be due to stronger job markets and income growth during inflationary periods, making it easier for people to meet their debt obligations. However, CPI may be acting more as a proxy for general economic health rather than being a direct cause, so this relationship should be interpreted with some caution.
+
+<b><u>6. COMPARING WITH NATIONAL HOME PRICE INDEX:</b></u>
+
+```{r}
+# Load csushpinsa
+csushpinsa <- read_csv("./data/CSUSHPINSA.csv") %>%
+  rename(DATE = 1, CSUSHPINSA = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge on DATE
+df <- left_join(delinquency, csushpinsa, by = "DATE")
+
+ggplot(df, aes(x = CSUSHPINSA, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "S&P/Case-Shiller U.S. National Home Price Index vs Delinquency Rate", x = "S&P/Case-Shiller U.S. National Home Price Index", y = "Delinquency Rate")
+
+cor(df$CSUSHPINSA, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: S&P/Case-Shiller U.S. National Home Price Index (CSUSHPINSA)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Negative trend
+	•	Correlation: −0.60 → moderate-to-strong negative relationship
+
+There is a moderate-to-strong negative correlation (r ≈ −0.60) between home prices and delinquency rate. This suggests that when home prices are high, delinquency rates tend to be lower — possibly because rising home prices reflect overall economic strength and higher consumer confidence. When prices drop, delinquency increases, likely due to broader economic stress. 
+
+<b><u>7. COMPARING WITH TRADE BALANCE:</u></b>
+
+```{r}
+# Load bopgstb
+bopgstb <- read_csv("./data/BOPGSTB.csv") %>%
+  rename(DATE = 1, BOPGSTB = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge on DATE
+df <- left_join(delinquency, bopgstb, by = "DATE")
+
+ggplot(df, aes(x = BOPGSTB, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Balance of Payments: Goods and Services Trade Balance vs Delinquency Rate", x = "Balance of Payments: Goods and Services Trade Balance", y = "Delinquency Rate")
+
+cor(df$BOPGSTB, df$DRCCLACBS, use = "complete.obs")
+
+```
+
+	•	X-axis: Balance of Payments: Goods and Services Trade Balance (BOPGSTB)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Positive trend
+	•	Correlation: +0.42 → moderate positive relationship
+	
+There is a moderate positive correlation (r ≈ 0.42) between the U.S. trade balance and credit card delinquency rates, indicating that as the trade deficit narrows (moves closer to zero), delinquency tends to rise. This likely reflects economic slowdowns where reduced consumer spending improves the trade balance but simultaneously increases financial strain on households, leading to more missed credit payments.
+
+
+<b><u>8. COMPARING WITH REAL DISPOSABLE INCOME:</b></u>
+
+```{r}
+# Load DSPIC96 (Real Disposable Personal Income)
+dspic96 <- read_csv("./data/DSPIC96.csv") %>%
+  rename(DATE = 1, DSPIC96 = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, dspic96, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = DSPIC96, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Real Disposable Personal Income vs Delinquency Rate", x = "Real Disposable Personal Income", y = "Delinquency Rate")
+
+# Correlation
+cor(df$DSPIC96, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Real Disposable Personal Income (DSPIC96)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Negative trend
+	•	Correlation: -0.68 → strong negative relationship
+
+As real disposable personal income increases, delinquency rates tend to fall. This strong negative correlation makes intuitive sense — with more disposable income, individuals are better equipped to meet credit obligations and avoid defaulting. The pattern here is logical and statistically sound.
+
+<b><u>9. COMPARING WITH FIXED PRIVATE INVESTMENT:</b></u>
+
+```{r}
+# Load FPI 
+fpi <- read_csv("./data/FPI.csv") %>%
+  rename(DATE = 1, FPI = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, fpi, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = FPI, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Fixed Private Investment vs Delinquency Rate", x = "Fixed Private Investment (FPI)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$FPI, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Fixed Private Investment (FPI)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Strong negative trend
+	•	Correlation: -0.69 → strong negative relationship
+	
+There’s a clear inverse relationship between fixed private investment and delinquency rates. As private investment rises, delinquency tends to decline—likely reflecting stronger economic growth and job creation, which enhance consumers’ ability to repay debts. This graph and correlation make strong intuitive and economic sense.
+
+<b><u>10. COMPARING WITH HUMAN CAPITAL INDEX:</b></u>
+
+```{r}
+# Load and prepare Human Capital Index
+hci <- read_csv("./data/HCIYISUSA066NRUG.csv") %>%
+  rename(DATE = 1, HCI = 2) %>%
+  mutate(YEAR = year(ymd(DATE)))
+
+# Prepare Delinquency data
+delinquency <- delinquency %>%
+  mutate(YEAR = year(DATE))
+
+# Merge on YEAR instead of exact DATE
+df <- left_join(delinquency, hci, by = "YEAR")
+
+# Plot
+ggplot(df, aes(x = HCI, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Human Capital Index per person vs Delinquency Rate", 
+       x = "Human Capital Index Per Person (HCI)", 
+       y = "Delinquency Rate")
+
+# Correlation
+cor(df$HCI, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Human Capital Index Per Person (HCI)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Negative trend
+	•	Correlation: -0.57 → moderate negative relationship
+	
+There is a moderate negative correlation (r ≈ -0.57) between the Human Capital Index and delinquency rate. As the level of human capital per person increases, delinquency rates tend to decrease — likely because greater education, skills, and productivity enhance financial literacy and income stability, reducing the risk of credit default.
+
+<b><u>11. COMPARING WITH INITIAL JOBLESS CLAIMS:</b></u>
+
+```{r}
+# Load ICSA (Initial Jobless Claims)
+icsa <- read_csv("./data/ICSA.csv") %>%
+  rename(DATE = 1, ICSA = 2) %>%
+  mutate(DATE = ymd(DATE),
+         Quarter = floor_date(DATE, unit = "quarter")) %>%  # Grouping by quarter
+  group_by(Quarter) %>%
+  summarize(ICSA = mean(ICSA, na.rm = TRUE), .groups = "drop")
+
+# Prepare Delinquency data (also grouped by quarter)
+delinquency_q <- delinquency %>%
+  mutate(Quarter = floor_date(DATE, unit = "quarter"))
+
+# Merge on matching quarters
+df <- left_join(delinquency_q, icsa, by = "Quarter")
+
+# Plot
+ggplot(df, aes(x = ICSA, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Initial Jobless Claims vs Delinquency Rate",
+       x = "Initial Jobless Claims (ICSA)",
+       y = "Delinquency Rate")
+
+# Correlation
+cor(df$ICSA, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Initial Jobless Claims (ICSA)
+	•	Y-axis: Credit Card Loan Delinquency Rate (DRCCLACBS)
+	•	Red Line: Slight upward trend
+	•	Correlation: +0.07 → very weak positive relationship
+	
+There is almost no meaningful correlation (r ≈ 0.07) between initial jobless claims and credit card delinquency rate. While a slight upward trend is visible, it’s statistically insignificant. This suggests that short-term unemployment spikes may not directly or consistently translate into higher consumer loan defaults—other macroeconomic or policy factors may buffer or delay the impact.
+
+<b><u>12. COMPARING WITH INDUSTRIAL PRODUCTION INDEX:</b></u>
+
+```{r}
+# Load INDPRO (Industrial Production)
+indpro <- read_csv("./data/INDPRO.csv") %>%
+  rename(DATE = 1, INDPRO = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, indpro, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = INDPRO, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Industrial Production vs Delinquency Rate", x = "Industrial Production Index", y = "Delinquency Rate")
+
+# Correlation
+cor(df$INDPRO, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Industrial Production Index
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Negative linear regression trend
+	•	Correlation Coefficient: -0.5449
+	
+Higher levels of industrial production are moderately associated with lower delinquency rates. This suggests that when manufacturing and production thrive, overall economic stability improves — likely boosting incomes and reducing the likelihood of loan defaults.
+
+<b><u>13. COMPARING WITH WEEKLY EARNINGS OF LABOR:</b></u>
+
+```{r}
+# Load LES1252881600Q (weekly earnings of wage and salary workers)
+labor_force <- read_csv("./data/LES1252881600Q.csv") %>%
+  rename(DATE = 1, LABOR_FORCE_25_54 = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, labor_force, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = LABOR_FORCE_25_54, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Weekly earnings of wage and salary workers vs Delinquency Rate", x = "Weekly earnings of wage and salary workers", y = "Delinquency Rate")
+
+# Correlation
+cor(df$LABOR_FORCE_25_54, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Weekly earnings of wage and salary workers
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression trend line
+	•	Correlation: -0.5481
+
+There is a moderate negative correlation between weekly earnings and delinquency rates, suggesting that as average earnings rise, delinquency rates tend to decrease — indicating improved financial stability among earners.
+
+<b><u>14. COMPARING WITH REAL M2 MONEY STOCK:</b></u>
+
+```{r}
+# Load M2REAL (Real M2 Money Stock)
+m2real <- read_csv("./data/M2REAL.csv") %>%
+  rename(DATE = 1, M2REAL = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, m2real, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = M2REAL, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Real M2 Money Stock vs Delinquency Rate", x = "M2 Money Stock (Real)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$M2REAL, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Real M2 Money Stock
+	•	Y-axis: Delinquency Rate
+	•	Red line: Linear regression line showing a negative trend
+	•	Correlation: -0.7485901
+
+There is a strong negative correlation between real M2 money stock and delinquency rates, suggesting that as the real money supply increases, delinquency rates tend to decline—possibly indicating that greater liquidity in the economy helps individuals and households better manage their debt obligations.
+
+<b><u>15. COMPARING WITH FIXED 30 YRS MORTGAGE RATE:</b></u>
+
+```{r}
+# Load mortgage data
+mortgage <- read_csv("./data/MORTGAGE30US.csv") %>%
+  rename(DATE = 1, MORTGAGE30US = 2) %>%
+  mutate(DATE = ymd(DATE),
+         Year = year(DATE),
+         Quarter = quarter(DATE)) %>%
+  group_by(Year, Quarter) %>%
+  summarise(MORTGAGE30US = mean(MORTGAGE30US, na.rm = TRUE)) %>%
+  mutate(QuarterDate = yq(paste0(Year, " Q", Quarter)))
+
+# Prepare delinquency data (assuming it’s quarterly)
+delinquency <- delinquency %>%
+  mutate(DATE = ymd(DATE),
+         Year = year(DATE),
+         Quarter = quarter(DATE)) %>%
+  mutate(QuarterDate = yq(paste0(Year, " Q", Quarter)))
+
+# Merge on quarter
+df <- left_join(delinquency, mortgage, by = "QuarterDate")
+
+# Plot
+ggplot(df, aes(x = MORTGAGE30US, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "30-Year Fixed Mortgage Rate vs Delinquency Rate", 
+       x = "Mortgage Rate (30-Year Fixed)", 
+       y = "Delinquency Rate")
+
+# Correlation
+cor(df$MORTGAGE30US, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Mortgage Rate (30-Year Fixed)
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression line (best-fit line)
+	•	Correlation: 0.625 (positive)
+
+There is a moderate positive correlation between 30-year fixed mortgage rates and delinquency rates. This suggests that as mortgage rates rise, more borrowers struggle with repayments, possibly due to higher monthly payments, leading to increased loan delinquencies.
+
+<b><u>16. COMPARING WITH BANK PRIME LOAN RATE:</b></u>
+
+```{r}
+# Load MPRIME (Bank Prime Loan Rate)
+mpr <- read_csv("./data/MPRIME.csv") %>%
+  rename(DATE = 1, MPRIME = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, mpr, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = MPRIME, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Bank Prime Loan Rate vs Delinquency Rate", x = "Bank Prime Loan Rate", y = "Delinquency Rate")
+
+# Correlation
+cor(df$MPRIME, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Bank Prime Loan Rate
+	•	Y-axis: Delinquency Rate
+	•	Red Line (Regression): Positive slope indicating a positive relationship
+	•	Correlation Coefficient: 0.391
+
+There is a moderate positive correlation between the bank prime loan rate and the delinquency rate. As prime rates increase, delinquency rates tend to rise as well. This suggests that higher borrowing costs may strain household finances, making it harder for borrowers to meet loan obligations, thereby increasing delinquency.
+
+<b><u>17. COMPARING WITH REAL PERSONAL CONSUMPTION EXPENDITURES:</b></u>
+
+```{r}
+# Load PCEC96 (Real Personal Consumption Expenditures)
+pcec <- read_csv("./data/PCEC96.csv") %>%
+  rename(DATE = 1, PCEC96 = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, pcec, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = PCEC96, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Real Personal Consumption vs Delinquency Rate", x = "Real Personal Consumption (PCEC96)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$PCEC96, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Real Personal Consumption (PCEC96)
+	•	Y-axis: Delinquency Rate
+	•	Red line: Linear regression line (shows a downward slope)
+	•	Correlation coefficient: −0.5496
+
+There is a moderate negative correlation between real personal consumption and delinquency rates. This suggests that as people spend more (higher real personal consumption), delinquency rates tend to fall — likely because higher consumer spending indicates greater economic confidence, employment, and financial stability, reducing the likelihood of loan defaults.
+
+<b><u>18. COMPARING WITH PERSONAL CONSUMPTION EXPENDITURES PRICE INDEX:</b></u>
+
+```{r}
+# Load PCEPI (Personal Consumption Expenditures Price Index)
+pcepi <- read_csv("./data/PCEPI.csv") %>%
+  rename(DATE = 1, PCEPI = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, pcepi, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = PCEPI, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "PCE Price Index vs Delinquency Rate", x = "PCE Price Index (PCEPI)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$PCEPI, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: PCE Price Index (PCEPI)
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression trend line
+	•	Correlation: -0.6748
+	
+There is a strong negative correlation between the PCE Price Index and delinquency rate, indicating that as the price level (adjusted for personal consumption) increases, delinquency rates tend to fall—suggesting that stable or rising consumer prices may be associated with healthier economic conditions that support debt repayment.
+
+<b><u>19. COMPARING WITH PERSONAL SAVINGS RATE:</b></u>
+
+```{r}
+# Load PSAVERT (Personal Savings Rate)
+psavert <- read_csv("./data/PSAVERT.csv") %>%
+  rename(DATE = 1, PSAVERT = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, psavert, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = PSAVERT, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Personal Savings Rate vs Delinquency Rate", x = "Personal Savings Rate (PSAVERT)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$PSAVERT, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Personal Savings Rate (PSAVERT)
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression line (best fit)
+	•	Correlation: -0.1626
+
+There is a weak negative correlation between personal savings rate and delinquency rate, suggesting that as people save more, delinquency rates tend to decrease slightly—but the relationship is not very strong.
+
+<b><u>20. COMPARING WITH RETAIL SALES:</b></u>
+
+```{r}
+# Load RSAFS (Retail Sales ex. Food Services)
+rsafs <- read_csv("./data/RSAFS.csv") %>%
+  rename(DATE = 1, RSAFS = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, rsafs, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = RSAFS, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Retail Sales (ex. Food) vs Delinquency Rate", x = "Retail Sales (RSAFS)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$RSAFS, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Retail Sales (RSAFS)
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression line (line of best fit)
+	•	Correlation: -0.6677 (moderately strong negative correlation)
+
+As real retail sales increase, delinquency rates tend to decrease, indicating that higher consumer spending (excluding food) is associated with lower financial distress. This suggests a healthy consumption pattern may reflect stronger economic conditions and improved creditworthiness among consumers.
+
+<b><u>21. COMPARING WITH LIFE EXPECTANCY:</b></u>
+
+```{r}
+# Load SPDYNLE00INUSA (Life Expectancy)
+lifeexp <- read_csv("./data/SPDYNLE00INUSA.csv") %>%
+  rename(DATE = 1, LIFE_EXPECTANCY = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, lifeexp, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = LIFE_EXPECTANCY, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Life Expectancy vs Delinquency Rate", x = "Life Expectancy", y = "Delinquency Rate")
+
+# Correlation
+cor(df$LIFE_EXPECTANCY, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Life Expectancy (in years)
+	•	Y-axis: Delinquency Rate (%)
+	•	Red Line: Linear regression line showing the overall trend
+	•	Correlation coefficient: -0.3821
+	
+There is a moderate negative correlation between life expectancy and delinquency rates. As life expectancy increases, delinquency rates tend to decrease, possibly indicating that regions with better overall well-being and health outcomes experience lower financial distress.
+
+<b><u>22. COMPARING WITH 20 YR EXPECTED INFLATION:</b></u>
+
+```{r}
+# Load T20YIEM (20-Year Breakeven Inflation Rate)
+inflation_20yr <- read_csv("./data/T20YIEM.csv") %>%
+  rename(DATE = 1, T20YIEM = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, inflation_20yr, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = T20YIEM, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "20-Year Breakeven Inflation vs Delinquency Rate", x = "20-Year Breakeven Inflation (T20YIEM)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$T20YIEM, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: 20-Year Breakeven Inflation (T20YIEM)
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression trend line (shows the general direction of the relationship)
+	•	Correlation: +0.099 (very weak positive correlation)
+
+Although the correlation is slightly positive, it is very weak. This suggests there is essentially no strong linear relationship between long-term inflation expectations and delinquency rates. Changes in breakeven inflation over 20 years don’t appear to significantly affect delinquency behavior in the short term.
+
+<b><u>23. COMPARING WITH DEBT SERVICE PAYMENTS:</b></u>
+
+```{r}
+# Load TDSP (Debt Service Payments as % of Disposable Income)
+tdsp <- read_csv("./data/TDSP.csv") %>%
+  rename(DATE = 1, TDSP = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, tdsp, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = TDSP, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Debt Service Payment ratio vs Delinquency Rate", x = "Debt Service Payment Ratio (TDSP)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$TDSP, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Debt Service Payment Ratio (TDSP)
+	•	Y-axis: Delinquency Rate
+	•	Red line: Linear regression (line of best fit)
+	•	Correlation: 0.44 (moderate positive correlation)
+
+As the debt service burden on households increases, delinquency rates tend to rise moderately. This suggests that higher financial obligations relative to income may elevate the risk of missed payments.
+
+<b><u>24. COMPARING WITH TOTAL CONSUMER CREDIT OWNED AND SECURITIZED:</b></u>
+
+```{r}
+# Load TOTALSL (Total Consumer Credit Owned and Securitized)
+totalsl <- read_csv("./data/TOTALSL.csv") %>%
+  rename(DATE = 1, TOTAL_CONSUMER_CREDIT = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, totalsl, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = TOTAL_CONSUMER_CREDIT, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(
+    title = "Total Consumer Credit vs Delinquency Rate",
+    x = "Total Consumer Credit (TOTALSL)",
+    y = "Delinquency Rate"
+  )
+
+# Correlation
+cor(df$TOTAL_CONSUMER_CREDIT, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Total Consumer Credit (TOTALSL)
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression line (line of best fit)
+	•	Correlation: -0.6920024 (strong negative correlation)
+
+As total consumer credit increases, delinquency rates tend to decrease. This suggests that higher consumer credit levels may be associated with stronger economic conditions or greater access to credit, which can help households avoid falling behind on debt payments.
+
+<b><u>25. COMPARING WITH CONSUMER SENTIMENT INDEX:</b></u>
+
+```{r}
+# Load UMCSENT (Consumer Sentiment Index)
+umcsent <- read_csv("./data/UMCSENT.csv") %>%
+  rename(DATE = 1, UMCSENT = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, umcsent, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = UMCSENT, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Consumer Sentiment vs Delinquency Rate", x = "Consumer Sentiment Index (UMCSENT)", y = "Delinquency Rate")
+
+# Correlation
+cor(df$UMCSENT, df$DRCCLACBS, use = "complete.obs")
+```
+
+	•	X-axis: Consumer Sentiment Index (UMCSENT)
+	•	Y-axis: Delinquency Rate
+	•	Red Line: Linear regression line (best-fit)
+	•	Correlation: +0.027 (very weak positive correlation)
+
+There is virtually no relationship between consumer sentiment and delinquency rates, suggesting that consumer optimism or pessimism does not significantly impact their likelihood to default on credit obligations.
+
+<b><u>26. COMPARING WITH US LEADING INDEX:</b></u>
+
+```{r}
+# Load USSLIND (U.S. Leading Index)
+usslind <- read_csv("./data/USSLIND.csv") %>%
+  rename(DATE = 1, US_LEADING_INDEX = 2) %>%
+  mutate(DATE = ymd(DATE))
+
+# Merge with Delinquency Rate
+df <- left_join(delinquency, usslind, by = "DATE")
+
+# Plot
+ggplot(df, aes(x = US_LEADING_INDEX, y = DRCCLACBS)) +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(
+    title = "U.S. Leading Index vs Delinquency Rate",
+    x = "U.S. Leading Index (USSLIND)",
+    y = "Delinquency Rate"
+  )
+
+# Correlation
+cor(df$US_LEADING_INDEX, df$DRCCLACBS, use = "complete.obs")
+```
+	•	X-axis: U.S. Leading Index
+	•	Y-axis: Delinquency Rate
+	•	Red line slope: Strongly negative
+	•	Correlation: -0.5747
+
+A strong negative relationship suggests that when forward-looking economic indicators improve, delinquency rates fall—supporting the idea that macroeconomic expectations are tied to financial stability.
+
+
+
+<b>Conclusion</b>
+
+This analysis reveals that credit card delinquency is influenced by an interplay of macroeconomic and demographic variables. 
+While some indicators like unemployment rate, interest rates, and initial jobless claims show moderate positive correlations with delinquency, many others—including broader measures like GDP, life expectancy, and human capital—exhibit weak or no clear linear relationships. 
+Notably, during periods of economic crisis (e.g., the 2008 recession and COVID-19), these patterns often deviate, reflecting the impact of policy interventions and external shocks. 
+
+Overall, delinquency rates appear to be driven by multiple factors acting together rather than any single variable alone—suggesting that future research could benefit from multivariate modeling to better understand and predict consumer credit behavior.
+
+
