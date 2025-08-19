@@ -52,6 +52,20 @@ def train_logreg(X: pd.DataFrame, y: pd.Series):
     y_pred = pipe.predict(X_test)
     y_proba = pipe.predict_proba(X_test)[:, 1]
 
+    # Also get TRAIN probabilities for a train ROC curve
+    y_proba_train = pipe.predict_proba(X_train)[:, 1]
+
+    # Pack a small eval payload for plotting
+    eval_payload = {
+        "X_train": X_train,          # shapes only used for info
+        "y_train": y_train,
+        "X_test": X_test,
+        "y_test": y_test,
+        "y_pred": y_pred,
+        "y_proba_test": y_proba,
+        "y_proba_train": y_proba_train,
+    }
+
     cm = confusion_matrix(y_test, y_pred).tolist()
     report = classification_report(y_test, y_pred, output_dict=True)
     roc_auc = float(roc_auc_score(y_test, y_proba))
@@ -80,4 +94,4 @@ def train_logreg(X: pd.DataFrame, y: pd.Series):
     }).sort_values(by="Coefficient", ascending=False)
     coefs.to_csv(MODELS_DIR / "logreg_coefficients.csv", index=False)
 
-    return pipe, metrics
+    return pipe, metrics, eval_payload
