@@ -56,3 +56,49 @@ def plot_confusion_matrix_basic(y_true, y_pred, class_names=("Non-Default","Defa
     if outpath:
         plt.savefig(outpath, bbox_inches="tight")
     plt.show()
+
+# Plot loss and ROC-AUC vs epochs for logistic regression (warm start)
+def plot_loss_and_auc_curves(curves: dict, outdir=None):
+    """
+    Plot loss (log loss) and ROC-AUC vs epochs using the `curves` dict returned by
+    train_logreg_with_loss(). Expects keys:
+      - 'train_loss', 'val_loss', 'train_auc', 'val_auc'
+    If `outdir` is provided (Path or str), saves two PNGs into that directory.
+    """
+    # Safely extract series
+    train_loss = curves.get("train_loss", [])
+    val_loss   = curves.get("val_loss", [])
+    train_auc  = curves.get("train_auc", [])
+    val_auc    = curves.get("val_auc", [])
+
+    # X-axis (epochs)
+    xs_loss = range(1, len(train_loss) + 1)
+
+    # Loss curve
+    plt.figure()
+    plt.plot(xs_loss, train_loss, label="Train Loss")
+    plt.plot(xs_loss, val_loss,   label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Log Loss")
+    plt.title("LogisticRegression (warm-start): Loss Curve")
+    plt.legend(loc="best")
+    if outdir is not None:
+        from pathlib import Path
+        Path(outdir).mkdir(parents=True, exist_ok=True)
+        plt.savefig(Path(outdir) / "loss_curve_logreg.png", bbox_inches="tight")
+    plt.show()
+
+    # AUC curve
+    xs_auc = range(1, len(train_auc) + 1)
+    plt.figure()
+    plt.plot(xs_auc, train_auc, label="Train ROC-AUC")
+    plt.plot(xs_auc, val_auc,   label="Validation ROC-AUC")
+    plt.xlabel("Epoch")
+    plt.ylabel("ROC-AUC")
+    plt.title("LogisticRegression (warm-start): ROC-AUC vs Epochs")
+    plt.legend(loc="best")
+    if outdir is not None:
+        from pathlib import Path
+        Path(outdir).mkdir(parents=True, exist_ok=True)
+        plt.savefig(Path(outdir) / "auc_curve_logreg.png", bbox_inches="tight")
+    plt.show()

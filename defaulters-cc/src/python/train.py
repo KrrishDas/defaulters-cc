@@ -14,6 +14,7 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     roc_auc_score,
+    log_loss
 )
 
 from .config import (
@@ -95,3 +96,112 @@ def train_logreg(X: pd.DataFrame, y: pd.Series):
     coefs.to_csv(MODELS_DIR / "logreg_coefficients.csv", index=False)
 
     return pipe, metrics, eval_payload
+
+
+def train_logreg_with_loss(
+    X: pd.DataFrame,
+    y: pd.Series,
+    *,
+    epochs: int = 200,
+    C: float = 1.0,
+    class_weight=None,
+):
+    """
+    Same model family (sklearn LogisticRegression) but trained in 'warm-start' steps
+    so we can record loss/AUC across epochs. Preprocessing (impute+scale) is learned
+    on the training split only to avoid leakage.
+
+    Returns:
+        pipe_final: fitted Pipeline (imputer+scaler+logreg) at the final epoch
+        metrics: standard test set metrics (same schema as train_logreg)
+        curves: dict with per-epoch lists: train_loss, val_loss, train_auc, val_auc
+    """
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # split first
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
+    )
+
+    # Preprocess (fit on train only)
+    pre = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="mean")),
+        ("scaler", StandardScaler()),
+    ])
+    X_train_t = pre.fit_transform(X_train)
+    X_val_t   = pre.transform(X_val)
+
+    # Warm-start LogisticRegression: take 1 optimizer step per epoch
+    logreg = LogisticRegression(
+        penalty=PENALTY,
+        solver=SOLVER,
+        C=C,
+        class_weight=class_weight,
+        max_iter=1,
+        warm_start=True,
+        random_state=RANDOM_STATE,
+    )
+
+    # first call initializes internal state
+    logreg.fit(X_train_t, y_train)
+
+    train_losses, val_losses = [], []
+    train_aucs,   val_aucs   = [], []
+
+    for _ in range(epochs):
+        logreg.fit(X_train_t, y_train)
+        p_tr = logreg.predict_proba(X_train_t)[:, 1]
+        p_va = logreg.predict_proba(X_val_t)[:, 1]
+        train_losses.append(log_loss(y_train, p_tr, labels=[0, 1]))
+        val_losses.append(log_loss(y_val,   p_va, labels=[0, 1]))
+        train_aucs.append(roc_auc_score(y_train, p_tr))
+        val_aucs.append(roc_auc_score(y_val,   p_va))
+
+    # Build a final pipeline object for consistent downstream use
+    pipe_final = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="mean")),
+        ("scaler", StandardScaler()),
+        ("logreg", LogisticRegression(
+            penalty=PENALTY,
+            solver=SOLVER,
+            C=C,
+            class_weight=class_weight,
+            max_iter=1,
+            warm_start=True,
+            random_state=RANDOM_STATE,
+        )),
+    ])
+    # Fit the preprocessing, then set the learned logreg into the pipeline
+    pipe_final.named_steps["imputer"].fit(X_train)
+    X_train_imp = pipe_final.named_steps["imputer"].transform(X_train)
+    pipe_final.named_steps["scaler"].fit(X_train_imp)
+    # Drop the freshly-initialized estimator and insert our trained one
+    pipe_final.named_steps["logreg"] = logreg
+
+    # Standard test-set evaluation to mirror train_logreg
+    y_pred = (logreg.predict_proba(X_val_t)[:, 1] >= 0.5).astype(int)
+    cm = confusion_matrix(y_val, y_pred).tolist()
+    report = classification_report(y_val, y_pred, output_dict=True)
+    roc_auc = float(roc_auc_score(y_val, logreg.predict_proba(X_val_t)[:, 1]))
+
+    metrics = {
+        "confusion_matrix": cm,
+        "classification_report": report,
+        "roc_auc": roc_auc,
+        "n_train": int(len(X_train)),
+        "n_test": int(len(X_val)),
+    }
+
+    curves = {
+        "train_loss": train_losses,
+        "val_loss":   val_losses,
+        "train_auc":  train_aucs,
+        "val_auc":    val_aucs,
+    }
+
+    # Optionally persist curves for plotting elsewhere
+    with open(REPORTS_DIR / "loss_curves.json", "w") as f:
+        json.dump(curves, f, indent=2)
+
+    return pipe_final, metrics, curves
