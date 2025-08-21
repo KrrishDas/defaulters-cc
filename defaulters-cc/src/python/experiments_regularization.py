@@ -1,6 +1,7 @@
 # src/python/experiments_regularization.py
 from pathlib import Path
 import json
+import shutil
 import itertools
 import numpy as np
 import pandas as pd
@@ -121,7 +122,8 @@ for key, spec in penalties.items():
             plot_coefficients(coefs, feature_names, label, prefix)
 
             results.append(dict(model="elasticnet", C=C, l1_ratio=l1r,
-                                roc_auc=auc, avg_precision=ap))
+                                roc_auc=auc, avg_precision=ap,
+                                label=label, prefix=prefix))
     else:
         for C in C_grid:
             pipe = build_pipe(spec["penalty"], C, l1_ratio=None)
@@ -140,7 +142,8 @@ for key, spec in penalties.items():
             plot_coefficients(coefs, feature_names, label, prefix)
 
             results.append(dict(model=key, C=C, l1_ratio=None,
-                                roc_auc=auc, avg_precision=ap))
+                                roc_auc=auc, avg_precision=ap,
+                                label=label, prefix=prefix))
 
 # save summary table
 with open(OUT_JSON, "w") as f:
@@ -149,5 +152,39 @@ with open(OUT_JSON, "w") as f:
         "n_test": int(len(y_test)),
         "results": results
     }, f, indent=2)
+
+# pick best by ROC-AUC, tiebreaker = Average Precision
+if results:
+    best = sorted(results, key=lambda r: (r["roc_auc"], r["avg_precision"]), reverse=True)[0]
+    best_out = {
+        "model": best["model"],
+        "C": best["C"],
+        "l1_ratio": best["l1_ratio"],
+        "roc_auc": best["roc_auc"],
+        "avg_precision": best["avg_precision"],
+        "label": best["label"],
+        "prefix": best["prefix"],
+        "n_train": int(len(y_train)),
+        "n_test": int(len(y_test)),
+    }
+
+    # write best summary
+    BEST_JSON = ROOT / "reports" / "best_regularization.json"
+    with open(BEST_JSON, "w") as f:
+        json.dump(best_out, f, indent=2)
+
+    # copy best plots with a friendly prefix
+    src_roc  = FIGS / f"{best['prefix']}_roc.png"
+    src_pr   = FIGS / f"{best['prefix']}_pr.png"
+    src_coef = FIGS / f"{best['prefix']}_coefs.png"
+    dst_roc  = FIGS / "best_roc.png"
+    dst_pr   = FIGS / "best_pr.png"
+    dst_coef = FIGS / "best_coefs.png"
+    for s, d in [(src_roc, dst_roc), (src_pr, dst_pr), (src_coef, dst_coef)]:
+        if s.exists():
+            shutil.copyfile(s, d)
+
+    print("Best configuration:")
+    print(json.dumps(best_out, indent=2))
 
 print(f"Done. Wrote figures to {FIGS} and summary to {OUT_JSON}")
