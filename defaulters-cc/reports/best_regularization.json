@@ -1,0 +1,11 @@
+{
+  "model": "l2",
+  "C": 10.0,
+  "l1_ratio": null,
+  "roc_auc": 1.0,
+  "avg_precision": 1.0,
+  "label": "L2 (C=10.0)",
+  "prefix": "l2_C10p0",
+  "n_train": 102,
+  "n_test": 35
+}

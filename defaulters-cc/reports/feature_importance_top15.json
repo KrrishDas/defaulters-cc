@@ -1,0 +1,73 @@
+{
+  "config_used": {
+    "penalty": "l2",
+    "C": 10.0,
+    "l1_ratio": null,
+    "solver": "saga",
+    "source": "best_regularization.json"
+  },
+  "n_train": 102,
+  "n_test": 35,
+  "top15": [
+    {
+      "feature": "CIVPART",
+      "importance": 0.3191721132897604
+    },
+    {
+      "feature": "HCIYISUSA066NRUG",
+      "importance": 0.07712418300653592
+    },
+    {
+      "feature": "SPDYNLE00INUSA",
+      "importance": 0.07342047930283221
+    },
+    {
+      "feature": "USSLIND",
+      "importance": 0.049455337690631825
+    },
+    {
+      "feature": "LES1252881600Q",
+      "importance": 0.04411764705882353
+    },
+    {
+      "feature": "INDPRO",
+      "importance": 0.043028322440087176
+    },
+    {
+      "feature": "PCEPI",
+      "importance": 0.036056644880174286
+    },
+    {
+      "feature": "CPIAUCSL",
+      "importance": 0.029084967320261428
+    },
+    {
+      "feature": "PCEC96",
+      "importance": 0.015577342047930258
+    },
+    {
+      "feature": "PSAVERT",
+      "importance": 0.013398692810457535
+    },
+    {
+      "feature": "BOPGSTB",
+      "importance": 0.01132897603485841
+    },
+    {
+      "feature": "GDP",
+      "importance": 0.010021786492374726
+    },
+    {
+      "feature": "TOTALSL",
+      "importance": 0.009912854030501102
+    },
+    {
+      "feature": "UMCSENT",
+      "importance": 0.00860566448801745
+    },
+    {
+      "feature": "UNRATE",
+      "importance": 0.00664488017429196
+    }
+  ]
+}
