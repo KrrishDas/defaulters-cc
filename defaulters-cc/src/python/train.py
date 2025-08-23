@@ -51,7 +51,7 @@ def train_logreg(X: pd.DataFrame, y: pd.Series):
 
     # Evaluate
     y_pred = pipe.predict(X_test)
-    y_proba = pipe.predict_proba(X_test)[:, 1]
+    y_proba = pipe.predict_proba(X_test)[:, 1] #probability of it being 1(positive)
 
     # Also get TRAIN probabilities for a train ROC curve
     y_proba_train = pipe.predict_proba(X_train)[:, 1]
@@ -92,7 +92,7 @@ def train_logreg(X: pd.DataFrame, y: pd.Series):
     coefs = pd.DataFrame({
         "Feature": X.columns,
         "Coefficient": logreg.coef_[0]
-    }).sort_values(by="Coefficient", ascending=False)
+    }).sort_values(by="Coefficient", ascending=False) 
     coefs.to_csv(MODELS_DIR / "logreg_coefficients.csv", index=False)
 
     return pipe, metrics, eval_payload
@@ -120,7 +120,7 @@ def train_logreg_with_loss(
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # split first
-    X_train, X_val, y_train, y_val = train_test_split(
+    X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
     )
 
@@ -130,9 +130,10 @@ def train_logreg_with_loss(
         ("scaler", StandardScaler()),
     ])
     X_train_t = pre.fit_transform(X_train)
-    X_val_t   = pre.transform(X_val)
+    X_test_t   = pre.transform(X_test)
 
     # Warm-start LogisticRegression: take 1 optimizer step per epoch
+    # Allows training over gradual epochs, step-by-step, almost behaving like a neural network
     logreg = LogisticRegression(
         penalty=PENALTY,
         solver=SOLVER,
@@ -146,17 +147,17 @@ def train_logreg_with_loss(
     # first call initializes internal state
     logreg.fit(X_train_t, y_train)
 
-    train_losses, val_losses = [], []
-    train_aucs,   val_aucs   = [], []
+    train_losses, test_losses = [], []
+    train_aucs,   test_aucs   = [], []
 
     for _ in range(epochs):
         logreg.fit(X_train_t, y_train)
         p_tr = logreg.predict_proba(X_train_t)[:, 1]
-        p_va = logreg.predict_proba(X_val_t)[:, 1]
-        train_losses.append(log_loss(y_train, p_tr, labels=[0, 1]))
-        val_losses.append(log_loss(y_val,   p_va, labels=[0, 1]))
+        p_va = logreg.predict_proba(X_test_t)[:, 1]
+        train_losses.append(log_loss(y_train, p_tr, labels=[0, 1])) # tells me how wrong the probability is 
+        test_losses.append(log_loss(y_test,   p_va, labels=[0, 1]))
         train_aucs.append(roc_auc_score(y_train, p_tr))
-        val_aucs.append(roc_auc_score(y_val,   p_va))
+        test_aucs.append(roc_auc_score(y_test,   p_va))
 
     # Build a final pipeline object for consistent downstream use
     pipe_final = Pipeline(steps=[
@@ -180,24 +181,24 @@ def train_logreg_with_loss(
     pipe_final.named_steps["logreg"] = logreg
 
     # Standard test-set evaluation to mirror train_logreg
-    y_pred = (logreg.predict_proba(X_val_t)[:, 1] >= 0.5).astype(int)
-    cm = confusion_matrix(y_val, y_pred).tolist()
-    report = classification_report(y_val, y_pred, output_dict=True)
-    roc_auc = float(roc_auc_score(y_val, logreg.predict_proba(X_val_t)[:, 1]))
+    y_pred = logreg.predict(X_test_t)
+    cm = confusion_matrix(y_test, y_pred).tolist()
+    report = classification_report(y_test, y_pred, output_dict=True)
+    roc_auc = float(roc_auc_score(y_test, logreg.predict_proba(X_test_t)[:, 1]))
 
     metrics = {
         "confusion_matrix": cm,
         "classification_report": report,
         "roc_auc": roc_auc,
         "n_train": int(len(X_train)),
-        "n_test": int(len(X_val)),
+        "n_test": int(len(X_test)),
     }
 
     curves = {
         "train_loss": train_losses,
-        "val_loss":   val_losses,
+        "test_loss":   test_losses,
         "train_auc":  train_aucs,
-        "val_auc":    val_aucs,
+        "test_auc":    test_aucs,
     }
 
     # Optionally persist curves for plotting elsewhere

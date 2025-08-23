@@ -15,7 +15,7 @@ TARGET_COL = "DRCCLACBS"       # delinquency rate series
 FLAG_COL = "DefaultFlag"       # binary label column name
 
 # Resampling (kept for reference if you generate combined CSV again)
-TARGET_FREQ = "Q"
+TARGET_FREQ = "Q" #quaterly 
 AGG = "mean"
 
 # Train/test split
