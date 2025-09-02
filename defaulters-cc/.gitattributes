@@ -1,0 +1,8 @@
+# Tell GitHub Linguist to treat HTML reports as documentation
+*.html linguist-documentation=true
+
+# Ensure Python is correctly highlighted and prioritized
+*.py linguist-language=Python
+
+# Ignore venv
+venv/* linguist-vendored
